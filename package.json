@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx tsx app.ts"
   },
   "author": "",
   "license": "ISC",
@@ -25,5 +26,12 @@
     "memorystore": "^1.6.7",
     "nodemailer": "^6.10.0",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
+    "@types/md5": "^2.3.5",
+    "tsx": "^4.20.3"
   }
 }

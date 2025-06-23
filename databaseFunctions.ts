@@ -1,9 +1,13 @@
 require('dotenv').config()
 
-const { ScanCommand, PutCommand, DeleteCommand, GetCommand, UpdateCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb")
-const documentClient = require("./dynamodbClient");
-const { table } = require('console');
-async function addEntry(entry, tableName=process.env.DYNAMO_NAME) {
+import { ScanCommand, PutCommand, DeleteCommand, GetCommand, UpdateCommand, QueryCommand } from "@aws-sdk/lib-dynamodb"
+// const documentClient = require("./dynamodbClient");
+import {documentClient} from "./dynamodbClient"
+// const { table } = require('console');
+
+import type { User, LocateEntryType } from "./types"
+
+export async function addEntry(entry: User, tableName=process.env.DYNAMO_NAME) {
 
     // Add a check to see if the user is appropiately being handled here
     const response = await documentClient.send(new PutCommand({
@@ -12,7 +16,7 @@ async function addEntry(entry, tableName=process.env.DYNAMO_NAME) {
     }))
     return true;
 }
-async function removeEntry(keyName, key, tableName=process.env.DYNAMO_NAME) {
+export async function removeEntry(keyName: string, key: string, tableName=process.env.DYNAMO_NAME) {
     const response = await documentClient.send(new DeleteCommand({
         TableName: tableName,
         Key: {
@@ -24,12 +28,13 @@ async function removeEntry(keyName, key, tableName=process.env.DYNAMO_NAME) {
 
 
 
-async function updateEntry(keyName, keyValue, updateAttributes, tableName=process.env.DYNAMO_NAME) {
+export async function updateEntry(keyName: string, keyValue: string, updateAttributes: any, tableName=process.env.DYNAMO_NAME): Promise<boolean> {
     // Guard against empty updateAttributes
     return new Promise(async (resolve) => {
 
         if (Object.keys(updateAttributes).length === 0) {
             throw new Error("updateAttributes cannot be empty");
+            resolve(false)
         }
     
         let updateExpression = "SET ";
@@ -52,7 +57,7 @@ async function updateEntry(keyName, keyValue, updateAttributes, tableName=proces
             ReturnValues: "UPDATED_NEW"
         }));
 
-        resolve(response.Attributes || true);
+        resolve(true);
 
 
 
@@ -63,11 +68,11 @@ async function updateEntry(keyName, keyValue, updateAttributes, tableName=proces
 }
 
 
-async function locateEntry(keyName, value, tableName=process.env.DYNAMO_NAME) {
+export async function locateEntry(keyName:string, value: string, tableName=process.env.DYNAMO_NAME) : LocateEntryType {
     return new Promise(async(resolve) => {
 
 
-        if (keyName.toLowerCase() === process.env.PARTITION_KEY.toLowerCase()) {
+        if (process.env.PARTITION_KEY&&keyName.toLowerCase() === process.env.PARTITION_KEY.toLowerCase()) {
             const response = await documentClient.send(new GetCommand({
                 TableName: tableName,
                 Key: {
@@ -76,7 +81,10 @@ async function locateEntry(keyName, value, tableName=process.env.DYNAMO_NAME) {
             }))
             // console.log(response);
 
-            resolve(response.Item || "")
+
+            
+
+            resolve((response.Item as User) || "")
         } else {
 
             const response = await documentClient.send(new QueryCommand({
@@ -88,7 +96,7 @@ async function locateEntry(keyName, value, tableName=process.env.DYNAMO_NAME) {
                 }
             }));
 
-            resolve(response.Items || "")
+            resolve(response.Items as User[] || "")
         }
         
         
@@ -101,9 +109,5 @@ async function locateEntry(keyName, value, tableName=process.env.DYNAMO_NAME) {
 
     
 }
-
-
-module.exports = {locateEntry, removeEntry, addEntry,updateEntry}
-
 
 

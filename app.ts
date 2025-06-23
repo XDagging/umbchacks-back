@@ -1,28 +1,48 @@
 require('dotenv').config()
 // npm i express https cors fs body-parser express-session uuid memorystore @aws-sdk/lib-dynamodb @aws-sdk/client-dynamodb md5 cryptr
 
-const {authenticateUser, isEmail, isPassword, isString, isNumber, craftRequest, setCookie, sendEmail, generateCode} = require('./functions.js');
-const express = require("express");
-const https = require("https");
-const cors = require("cors")
-const {v4: uuid, v4} = require("uuid");
-const fs = require('fs');
+const {authenticateUser, isEmail, isPassword, isString, isNumber, reportError, craftRequest, setCookie, sendEmail, generateCode} = require('./functions.js');
 
-const md5 = require('md5');
-const bodyParser = require("body-parser")
+import express from "express";
+// const express = require("express");
+// const https = require("https");
+import https from "https";
+
+import cors from "cors"
+import { v4 } from "uuid";
+
+
+import fs from "fs"
+import { Request, Response, NextFunction } from 'express';
+// const md5 = require('md5');
+import md5 from "md5"
+
+import bodyParser from "body-parser"
+// const bodyParser = require("body-parser")
 const app = express();
-const region = "us-east-1"
-const session = require("express-session");
-const { locateEntry, addEntry, updateEntry } = require('./databaseFunctions.js');
-const MemoryStore = require('memorystore')(session)
+const region: string = "us-east-1"
+// const session = require("express-session");
+// @ts-ignore
+import session from "express-session"
 
-const bcrypt = require("bcrypt");
+import {locateEntry, addEntry, updateEntry} from "./databaseFunctions.js"
+// ...existing code...
+// Use require for memorystore if import fails
 
-const Cryptr = require('cryptr');
-const { report } = require('process');
+const MemoryStore = require("memorystore")(session);
+// ...existing code...
+
+// const bcrypt = require("bcrypt");
+import bcrypt from "bcrypt"
+
+// const Cryptr = require('cryptr');
+import Cryptr from "cryptr"
 
 const saltRounds = 10;
-
+import type { Options, RegisterBody, User, LoginBody, CodeBody, LocateEntryEntry } from "./types.js";
+if (!process.env.ENCRYPTION_KEY) {
+    throw new Error("Encryption key isn't set. Add it now.");
+}
 const cmod = new Cryptr(process.env.ENCRYPTION_KEY);
 
 // Things to do
@@ -30,7 +50,7 @@ const cmod = new Cryptr(process.env.ENCRYPTION_KEY);
 const SCHEMA = ['name','email','password']
 
 // Basic web server configurations
-let options;
+let options: Options;
 if (process.env.NODE_ENV === "DEV") {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
@@ -72,7 +92,7 @@ if (process.env.NODE_ENV === "DEV") {
 
 // Setting up cookies
 app.use(session({
-    secret: process.env.COOKIE_SECRET,
+    secret: process.env.COOKIE_SECRET as string,
     cookie: {
         path: "/",
         maxAge: 2628000000,
@@ -84,7 +104,7 @@ app.use(session({
     saveUninitialized: true,
     store: new MemoryStore({
         checkPeriod: 86400000 
-    }), 
+    }) as any, 
 }));
 
 // Setting up body parser
@@ -103,7 +123,7 @@ const server = https.createServer(options, app)
 
 
 
-app.get("/", (req,res) => {
+app.get("/", (req: Request,res: Response) => {
     res.send("new year new me")
 })
 
@@ -111,14 +131,14 @@ app.get("/", (req,res) => {
 
 
 
-app.post('/register', async (req,res) => {
+app.post('/register', async (req: Request,res: Response) => {
     // These are where the checks are. 
-    console.log("asdf")
+    
 
 
     // You need to add a variable name for every single thing you are trying to do.
     try {
-        const {name, email, password} = req.body;
+        const {name, email, password} : RegisterBody = req.body;
 
 
 
@@ -129,16 +149,13 @@ app.post('/register', async (req,res) => {
 
                 // then we should check if the user exists or not
                 
-                await locateEntry("emailHash", md5(email.toLowerCase())).then((users) => {
+                await locateEntry("emailHash", md5(email.toLowerCase())).then((users: "" | User | User[]) => {
                     console.log("this is users", users)
-                    if (users.length>0) {
+                    if (Array.isArray(users) && users.length > 0) {
                         // This would only occur when this user already exists
-                        
                         res.status(307).send(craftRequest(307))
-
-
                     } else {
-                        const user = users[0];
+                        const user = Array.isArray(users) ? users[0] : users;
 
                         if (user) {
                             res.status(307).send(craftRequest(307));
@@ -149,13 +166,9 @@ app.post('/register', async (req,res) => {
 
                                 if (SCHEMA.includes(key)) {
                                     if (key.toLowerCase() !== "password") {
-                                        newUser = {[key]: cmod.encrypt(req.body[key].trim().toLowerCase())}
+                                        newUser = {[key]: cmod?.encrypt(req.body[key].trim().toLowerCase())}
                                     }
-
-
                                 }
-                             
-                                
                             })
 
                             const uuid = v4();
@@ -170,41 +183,22 @@ app.post('/register', async (req,res) => {
 
                                 } else {
                                     addEntry({ 
-                                
-                                
                                         uuid: uuid,
                                         name: name,
                                         emailHash: md5(email.trim()),
-                                        email: cmod.encrypt(email.trim()),
+                                        email: cmod?.encrypt(email.trim()),
                                         password: hash,
                                         ...newUser,
-        
                                     })
                                     
-                            setCookie(req,uuid);
-                            res.status(200).send(craftRequest(200,uuid));
+                                    setCookie(req,uuid);
+                                    res.status(200).send(craftRequest(200,uuid));
                                 }
 
                             })
-
-
-
-                          
-
-                            
-
-
                             // addEntry(newUser);
                         }
-
-
-
-
-
                     }
-                    
-    
-    
                 })
     
     
@@ -225,20 +219,20 @@ app.post("/login", (req,res) => {
 
     try {
 
-        const {email, password} = req.body;
+        const {email, password}: LoginBody = req.body;
 
 
         if (isEmail(email) && isPassword(password)) {
-            locateEntry("emailHash", md5(email)).then((users) => {
-                if (users.length>0) {
+            locateEntry("emailHash", md5(email)).then((users: LocateEntryEntry) => {
+                if (Array.isArray(users) && users.length > 0) {
                     console.log(users[0])
-                    locateEntry("uuid", users[0].uuid).then((user) => {
+                    locateEntry("uuid", users[0].uuid).then((user: LocateEntryEntry) => {
                         // console.log(thing);
-                        if (user != null) {
+                        if (user != null&&user!=""&&!Array.isArray(user)) {
                             
 
 
-                            bcrypt.compare(password, user.password, (err,result) => {
+                            bcrypt.compare(password, user.password, (err: any,result: boolean) => {
                                 if (err) {
                                     console.log(err);
                                     res.status(400).send(craftRequest(400));
@@ -282,7 +276,7 @@ app.post("/login", (req,res) => {
 
 app.get("/getUser", (req,res) => {
 
-    authenticateUser(req).then((user) => {
+    authenticateUser(req).then((user: string) => {
         if (user === "No user found") {
             res.status(403).send(craftRequest(403));
         } else {
@@ -321,18 +315,18 @@ app.post("/changeSettings", (req,res) => {
 
         // const {...x} = req.body;
         // console.log("req",req.body);
-        authenticateUser(req).then((id) => {
+        authenticateUser(req).then((id: string) => {
 
             if (id === "No user found") {
     
                 res.status(403).send(craftRequest(403))
             } else {
                 
-                locateEntry("uuid", id).then((user) => {
-                    if (user !== "") {
+                locateEntry("uuid", id).then((user: LocateEntryEntry) => {
+                    if (user !== ""&&!Array.isArray(user)) {
                         
 
-                        const changedUser = {}
+                        const changedUser: any = {}
                         console.log(Object.keys(user))
 
                         Object.keys(user).map((key) => {
@@ -346,7 +340,7 @@ app.post("/changeSettings", (req,res) => {
 
 
                         console.log("changed user", changedUser)
-                        updateEntry("uuid", user.uuid, changedUser).then((a) => {
+                        updateEntry("uuid", user?.uuid, changedUser).then((a) => {
                             console.log("a", a);
                             res.status(200).send(craftRequest(200));
                         })
@@ -390,13 +384,13 @@ app.post("/changeSettings", (req,res) => {
 app.post("/sendCode", (req,res) => {
     try {
 
-        const {email} = req.body;
+        const {email}: CodeBody = req.body;
         
 
         if (isEmail(email)) {
-            locateEntry("emailHash", md5(email.trim())).then((users) => {
+            locateEntry("emailHash", md5(email.trim())).then((users: LocateEntryEntry) => {
                 // console.log("this is the",user)
-                if (users.length !== 0) {
+                if (users !== ""&&Array.isArray(users)) {
                     // console.log(user);
                     const user = users[0]
                     const code = generateCode(6)
@@ -409,9 +403,9 @@ Your code is: ${code}`
 
                     // bookmark
                     console.log(user)
-                    updateEntry("uuid", user.uuid, {passwordCode: code}).then((response) => {
+                    updateEntry("uuid", user.uuid, {passwordCode: code}).then((response: boolean) => {
                         if (response) {
-                            sendEmail(email.trim(), `Reset Password - ${process.env.COMPANY_NAME}`,text).then((alert) => {
+                            sendEmail(email.trim(), `Reset Password - ${process.env.COMPANY_NAME}`,text).then((alert: boolean) => {
                                 if (alert) {
                                     res.status(200).send(craftRequest(200));
                                 } else {
@@ -463,12 +457,12 @@ app.post("/changePassword", (req,res) => {
 
             
 
-            locateEntry("emailHash", emailHash).then((users) => {
-                if (users.length !== 0) {
+            locateEntry("emailHash", emailHash).then((users: LocateEntryEntry) => {
+                if (Array.isArray(users)&&users.length>0) {
                     const user = users[0];
 
-                    locateEntry("uuid", user.uuid).then((user) => {
-                        if (user !== "") {
+                    locateEntry("uuid", user.uuid).then((user: LocateEntryEntry) => {
+                        if (!Array.isArray(user)&&user !== "") {
 
                             if (String(user.passwordCode) === String(code)) {
 
@@ -476,7 +470,7 @@ app.post("/changePassword", (req,res) => {
                                 if (isPassword(password)) {
                                     
                                     
-                                    bcrypt.hash(password, saltRounds, function(err, hash) {
+                                    bcrypt.hash(password, saltRounds, function(err: any, hash: string) {
                                     // Store hash in your password DB.
 
                                         if (err) {
@@ -503,7 +497,7 @@ app.post("/changePassword", (req,res) => {
 
 
                             } else {
-                                res.status(400).craftRequest(400, {status: "invalid code"})
+                                res.status(400).send(craftRequest(400, {status: "invalid code"}))
                             }
 
                         } else {
@@ -545,114 +539,6 @@ app.post("/changePassword", (req,res) => {
         res.status(400).send(craftRequest(400));
     }
 })
-
-
-
-
-
-
-
-app.post("/schoolLogin", (req,res) => {
-    try {
-
-
-
-
-        
-
-
-    } catch(e) {
-
-
-
-    }
-})
-
-
-
-
-app.post("/createSchool", (req,res) => {
-    // name: "Walter Johnson High School",
-    // address: '6400 Rock Spring Dr, Bethesda, MD 20814',
-
-
-    // One admin account per school
-
-    // email
-    try {
-        const {email, name, schoolAddress, password} = req.body;
-
-        if (isEmail(email) && isString(name, 30) && schoolAddress.length<1000) {
-            
-            locateEntry("emailHash", md5(email),process.env.DYNAMO_SECONDARY).then((users) => {
-                
-                if (users.length === 0) {
-                   
-
-
-                    bcrypt.hash(password, saltRounds, function(err, hash) {
-
-
-                        if (err) {
-                            console.log(err);
-                            res.status(400).send(craftRequest(400));
-                        } else {
-                            if (hash !== null) {
-                            
-                                const uuid = v4()
-                                const newSchool = {
-                                    uuid: uuid,
-                                    password: hash,
-                                    emailHash: md5(email),
-                                    email: cmod.encrypt(email),
-                                    schoolAddress: cmod.encrypt(schoolAddress),
-                                    name: cmod.encrypt(name),
-                                }
-        
-        
-                                
-        
-                                addEntry(newSchool, process.env.DYNAMO_SECONDARY).then((x) => {
-                                    res.status(200).send(craftRequest(200));
-        
-                                })
-        
-        
-                            } else {
-                                res.status(400).send(craftRequest(400));
-                            }
-                        }
-        
-                        // Store hash in your password DB.
-                    });
-                 
-
-
-                } else {
-                    res.status(400).send(craftRequest(400));
-                }
-
-            })
-           
-
-
-
-        } else {
-            res.status(400).send(craftRequest(400));
-        }
-
-
-
-
-
-    } catch(e) {
-        console.log(e)
-        reportError(e);
-        res.status(400).send(craftRequest(400))
-    }
-
-})
-
 
 
 

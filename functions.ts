@@ -1,6 +1,15 @@
-const nodemailer = require("nodemailer")
+// const nodemailer = require("nodemailer")
+import nodemailer from "nodemailer"
+import { Request, Response, NextFunction } from 'express';
 
-function authenticateUser(req) {
+
+declare module 'express-session' {
+    interface SessionData {
+        user?: string;
+    }
+}
+
+function authenticateUser(req: Request) {
 
     return new Promise((resolve) => {
         let sessionId = req.sessionID;
@@ -8,7 +17,7 @@ function authenticateUser(req) {
         if (!sessionId) {
             resolve("No user found");
         } else {
-            req.sessionStore.get(sessionId, (err, session) => {
+            req.sessionStore.get(sessionId, (err, session: any) => {
                 if (err) {
                     console.log(err);
                     resolve("No user found");
@@ -16,7 +25,7 @@ function authenticateUser(req) {
                     if (!session) {
                         resolve("No user found");
                     } else {
-                        const currentUser = session.user;
+                        const currentUser = session?.user;
                         if (!currentUser) {
                             resolve("No user found");
                         } else {
@@ -30,7 +39,7 @@ function authenticateUser(req) {
 }
 
 
-async function sendEmail(to, subject, text) {
+async function sendEmail(to: string, subject: string, text: string) {
     return new Promise(async (resolve) => {
 
         const transporter = nodemailer.createTransport({
@@ -63,7 +72,7 @@ async function sendEmail(to, subject, text) {
 
 
 async function reportError(err) {
-    if (err.length>0) {
+    if (err.length>0&&process.env.EMAIL_PERSONAL) {
         await sendEmail(process.env.EMAIL_PERSONAL, "Report Bug #", err);
         return true;
     } else {
@@ -73,7 +82,7 @@ async function reportError(err) {
 
 
 
-function isEmail(email) {
+function isEmail(email: string) {
     
     let passedTests = true;
 
@@ -98,7 +107,7 @@ function isEmail(email) {
 
 }
 
-function isPassword(password) {
+function isPassword(password: string) {
 
 
     let passedTests = true;
@@ -116,12 +125,12 @@ function isPassword(password) {
 }
 
 
-function isString(s, lengthLimit=1000000) {
+function isString(s: string, lengthLimit=1000000) {
 
 
     const string = String(s);
     for (let i=0; i<string.length; i++) {
-        if (!isNaN(string[i])) {
+        if (!/^[a-zA-Z]$/.test(string[i])) {
             return false;
         }
 
@@ -136,12 +145,12 @@ function isString(s, lengthLimit=1000000) {
 }
 
 
-function isNumber(number, lengthLimit=100000) {
+function isNumber(number: string, lengthLimit=100000) {
     
 
     const string = String(number);
     for (let i=0; i<string.length; i++) {
-        if (isNaN(string[i])) {
+        if (isNaN(Number(string[i]))) {
             return false;
         }
 
@@ -159,7 +168,7 @@ function isNumber(number, lengthLimit=100000) {
 
 
 
-function generateCode(length) {
+function generateCode(length: number) {
     
     let code = ""; // Initialize code as an empty string
     const numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -173,7 +182,7 @@ function generateCode(length) {
 
 
 
-function craftRequest(code,body) {
+function craftRequest(code: number,body: object) {
     if ((code === 403) || (code === 404) || (code === 400)) {
         return JSON.stringify({
             code: "err",
@@ -198,7 +207,7 @@ function craftRequest(code,body) {
 
 
 
-function setCookie(req, uuid) {
+function setCookie(req: Request, uuid: string) {
 
     if (req && uuid) {
         req.session.user = uuid;
