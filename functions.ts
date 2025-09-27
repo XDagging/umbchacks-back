@@ -9,6 +9,8 @@ declare module 'express-session' {
     }
 }
 
+
+// ALWAYS USE
 function authenticateUser(req: Request) {
 
     return new Promise((resolve) => {

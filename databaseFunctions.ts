@@ -1,3 +1,5 @@
+// DON'T TOUCH THIS FILE UNLESS YOU KNOW WHAT YOU'RE DOING
+
 require('dotenv').config()
 
 import { ScanCommand, PutCommand, DeleteCommand, GetCommand, UpdateCommand, QueryCommand } from "@aws-sdk/lib-dynamodb"

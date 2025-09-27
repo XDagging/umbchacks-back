@@ -1,3 +1,6 @@
+// NEVER TOUCH
+
+
 require('dotenv').config()
 // const {DynamoDBClient} = require("@aws-sdk/client-dynamodb")
 import {DynamoDBClient} from "@aws-sdk/client-dynamodb"
