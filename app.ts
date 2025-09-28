@@ -58,8 +58,8 @@ if (process.env.NODE_ENV === "DEV") {
 
     // development certificate
     options = {
-        key: fs.readFileSync('C:\\Users\\jingl\\umbchacks-back\\key.pem'),
-        cert: fs.readFileSync('C:\\Users\\jingl\\umbchacks-back\\cert.pem'),
+        key: fs.readFileSync('C:\\Users\\marac\\code\\hackathon-quhacks\\key.pem'),
+        cert: fs.readFileSync('C:\\Users\\marac\\code\\hackathon-quhacks\\cert.pem'),
         // Remove this line once done with production
         rejectUnauthorized: false
     };    
@@ -536,7 +536,22 @@ app.post("/api/gemini", async (req, res) => {
   }
 
   try {
-    const result = await gemini(prompt);
+
+
+
+    // const result = await gemini(prompt);
+
+      const result = JSON.stringify({
+      question: "Which of the following is a primary goal of diversification in an investment portfolio?",
+      choices: [
+        "To guarantee high returns",
+        "To concentrate risk in a single asset",
+        "To minimize the impact of any single asset's poor performance",
+        "To eliminate all investment risk"
+      ],
+      answer: 3 // The correct answer is at index 3 (i.e., the third option)
+    });
+
     res.json({ result });
   } catch (err) {
     console.error(err);
