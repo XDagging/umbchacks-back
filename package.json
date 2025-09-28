@@ -13,6 +13,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.767.0",
     "@aws-sdk/lib-dynamodb": "^3.767.0",
+    "@google/genai": "^1.21.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/express-session": "^1.18.2",
     "@types/md5": "^2.3.5",

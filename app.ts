@@ -43,6 +43,8 @@ import type { Options, RegisterBody, User, LoginBody, CodeBody, LocateEntryEntry
 if (!process.env.ENCRYPTION_KEY) {
     throw new Error("Encryption key isn't set. Add it now.");
 }
+
+import { gemini } from "./gemini";
 const cmod = new Cryptr(process.env.ENCRYPTION_KEY);
 
 // Things to do
@@ -56,8 +58,8 @@ if (process.env.NODE_ENV === "DEV") {
 
     // development certificate
     options = {
-        key: fs.readFileSync('C:\\Users\\marac\\code\\hackathon-quhacks\\key.pem'),
-        cert: fs.readFileSync('C:\\Users\\marac\\code\\hackathon-quhacks\\cert.pem'),
+        key: fs.readFileSync('C:\\Users\\jingl\\umbchacks-back\\key.pem'),
+        cert: fs.readFileSync('C:\\Users\\jingl\\umbchacks-back\\cert.pem'),
         // Remove this line once done with production
         rejectUnauthorized: false
     };    
@@ -112,15 +114,11 @@ app.use(bodyParser.json({limit: "10mb"}))
 
 
 
+app.use(express.json());
+
 
 
 const server = https.createServer(options, app)
-
-
-
-
-
-
 
 
 app.get("/", (req: Request,res: Response) => {
@@ -385,8 +383,6 @@ app.post("/sendCode", (req,res) => {
     try {
 
         const {email}: CodeBody = req.body;
-        
-
         if (isEmail(email)) {
             locateEntry("emailHash", md5(email.trim())).then((users: LocateEntryEntry) => {
                 // console.log("this is the",user)
@@ -400,7 +396,6 @@ app.post("/sendCode", (req,res) => {
 You have asked to reset your password. If this wasn't you, ignore this email.
 
 Your code is: ${code}`
-
                     // bookmark
                     console.log(user)
                     updateEntry("uuid", user.uuid, {passwordCode: code}).then((response: boolean) => {
@@ -417,22 +412,13 @@ Your code is: ${code}`
                             res.status(400).send(craftRequest(400));
                         }
                     })
-                    
-
-
                 } else {
                     res.status(400).send(craftRequest(400));
                 }
             })
-
-
         } else {
             res.status(400).send(craftRequest(400));
         }
-
-
-
-
     } catch(e) {
         console.log(e);
         reportError(e);
@@ -543,7 +529,20 @@ app.post("/changePassword", (req,res) => {
 
 
 
+app.post("/api/gemini", async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) {
+    return res.status(400).json({ error: "Missing prompt" });
+  }
 
+  try {
+    const result = await gemini(prompt);
+    res.json({ result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Gemini request failed" });
+  }
+});
 
 
 
